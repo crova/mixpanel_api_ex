@@ -39,7 +39,12 @@ defmodule Mixpanel.Client do
     {:ok, Enum.into(config, %{})}
   end
 
-  def handle_cast({:track, event, properties}, %{token: token, active: true} = state) do
+  # No events submitted when env configuration is set to false.
+  def handle_cast(_request, %{active: false} = state) do
+    {:noreply, state}
+  end
+
+  def handle_cast({:track, event, properties}, %{token: token} = state) do
     data =
       %{event: event, properties: Map.put(properties, :token, token)}
       |> Poison.encode!()
@@ -60,7 +65,7 @@ defmodule Mixpanel.Client do
     {:noreply, state}
   end
 
-  def handle_cast({:engage, event}, %{token: token, active: true} = state) do
+  def handle_cast({:engage, event}, %{token: token} = state) do
     data =
       event
       |> Map.put(:"$token", token)
@@ -77,11 +82,6 @@ defmodule Mixpanel.Client do
         )
     end
 
-    {:noreply, state}
-  end
-
-  # No events submitted when env configuration is set to false.
-  def handle_cast(_request, %{active: false} = state) do
     {:noreply, state}
   end
 end

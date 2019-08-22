@@ -15,26 +15,29 @@ The package can be installed as:
 
   ```elixir
   def deps do
-    [{:mixpanel_api_ex, "~> 1.0.1"}]
+    [{:mixpanel_api_ex, "~> 2.0.0"}]
   end
   ```
 
-  2. Ensure `mixpanel_api_ex` is started before your application:
-
+  2. Ensure your Mixpanel token is configured in your app's config:
   ```elixir
-  def application do
-    [applications: [:mixpanel_api_ex]]
-  end
+  config :your_app, :mixpanel, token: "<Put API token here>"
   ```
 
-  3. Ensure your Mixpanel token was placed in config file:
+  3. Ensure `Mixpanel.Supervisor` is started in `YourApp.Application`, with your app name as a parameter:
+
   ```elixir
-  config :mixpanel_api_ex, token: "<Put API token here>", active: true
+  def start(_type, _args) do
+    children = [
+      # ...
+      {Mixpanel.Supervisor, :your_app}
+    ]
+  end
   ```
 
   4. Disable sending requests to API for tests:
   ```elixir
-  config :mixpanel_api_ex, token: "", active: false
+  config :your_app, :mixpanel, token: "", active: false
   ```
 
 ## Usage
