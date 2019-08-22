@@ -1,7 +1,7 @@
 defmodule Mixpanel.Mixfile do
   use Mix.Project
 
-  @version "1.0.1"
+  @version "2.0.0"
 
   def project do
     [
@@ -41,12 +41,12 @@ defmodule Mixpanel.Mixfile do
   end
 
   def application do
-    [mod: {Mixpanel, []}, applications: [:logger, :httpoison]]
+    [applications: [:logger, :httpoison]]
   end
 
   defp deps do
     [
-      {:httpoison, "~> 1.2"},
+      {:httpoison, "~> 0.13"},
       {:poison, "~> 3.1"},
       {:credo, "~> 0.2", only: :dev},
       {:dogma, "~> 0.0", only: :dev},

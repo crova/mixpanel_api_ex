@@ -1,13 +1,7 @@
 defmodule Mixpanel do
-  use Application
-
   @moduledoc """
   Elixir client for the Mixpanel API.
   """
-
-  def start(_type, _args) do
-    Mixpanel.Supervisor.start_link()
-  end
 
   @doc """
   Tracks an event.
