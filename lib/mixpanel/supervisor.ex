@@ -18,9 +18,9 @@ defmodule Mixpanel.Supervisor do
     end
 
     children = [
-      worker(Mixpanel.Client, [config, [name: Mixpanel.Client]])
+      worker(Mixpanel.Client, [config, []])
     ]
 
-    supervise(children, strategy: :one_for_one, name: Mixpanel.Supervisor)
+    supervise(children, strategy: :one_for_one)
   end
 end
