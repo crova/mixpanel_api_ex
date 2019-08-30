@@ -24,20 +24,22 @@ The package can be installed as:
   config :your_app, :mixpanel, token: "<Put API token here>"
   ```
 
-  3. Ensure `Mixpanel.Supervisor` is started in `YourApp.Application`, with your app name as a parameter:
+  3. Add `YourApp.Mixpanel` module to your code:
+  ```elixir
+  defmodule YourApp.Mixpanel do
+    use Mixpanel, otp_app: :your_app
+  end
+  ```
+
+  4. Ensure `YourApp.Mixpanel` is started in `YourApp.Application`:
 
   ```elixir
   def start(_type, _args) do
     children = [
       # ...
-      {Mixpanel.Supervisor, :your_app}
+      {YourApp.Mixpanel}
     ]
   end
-  ```
-
-  4. Disable sending requests to API for tests:
-  ```elixir
-  config :your_app, :mixpanel, token: "", active: false
   ```
 
 ## Usage
@@ -45,17 +47,17 @@ The package can be installed as:
   1. Track events with `Mixpanel.track/3` function:
 
   ```elixir
-  iex> Mixpanel.track("Signed up", %{"Referred By" => "friend"}, distinct_id: "13793")
+  iex> YourApp.Mixpanel.track("Signed up", %{"Referred By" => "friend"}, distinct_id: "13793")
   :ok
-  iex> Mixpanel.track("Level Complete", %{"Level Number" => 9}, distinct_id: "13793", time: 1358208000, ip: "203.0.113.9")
+  iex> YourApp.Mixpanel.track("Level Complete", %{"Level Number" => 9}, distinct_id: "13793", time: 1358208000, ip: "203.0.113.9")
   :ok
   ```
 
   2. Track profile updates with `Mixpanel.engage/4` function:
 
   ```elixir
-  iex> Mixpanel.engage("13793", "$set", %{"Address" => "1313 Mockingbird Lane"}, ip: "123.123.123.123")
+  iex> YourApp.Mixpanel.engage("13793", "$set", %{"Address" => "1313 Mockingbird Lane"}, ip: "123.123.123.123")
   :ok
-  iex> Mixpanel.engage("13793", "$set", %{"Address" => "1313 Mockingbird Lane", "Birthday" => "1948-01-01"}, ip: "123.123.123.123")
+  iex> YourApp.Mixpanel.engage("13793", "$set", %{"Address" => "1313 Mockingbird Lane", "Birthday" => "1948-01-01"}, ip: "123.123.123.123")
   :ok
   ```

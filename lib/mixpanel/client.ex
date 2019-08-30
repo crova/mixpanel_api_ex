@@ -20,9 +20,9 @@ defmodule Mixpanel.Client do
 
   See `Mixpanel.track/3`
   """
-  @spec track(String.t(), Map.t()) :: :ok
-  def track(event, properties \\ %{}) do
-    GenServer.cast(__MODULE__, {:track, event, properties})
+  @spec track(String.t(), Map.t(), Atom.t()) :: :ok
+  def track(event, properties \\ %{}, process \\ nil) do
+    GenServer.cast(process || __MODULE__, {:track, event, properties})
   end
 
   @doc """
@@ -31,8 +31,8 @@ defmodule Mixpanel.Client do
   See `Mixpanel.engage/4`.
   """
   @spec engage(Map.t()) :: :ok
-  def engage(event) do
-    GenServer.cast(__MODULE__, {:engage, event})
+  def engage(event, process \\ nil) do
+    GenServer.cast(process || __MODULE__, {:engage, event})
   end
 
   def init({:ok, config}) do
