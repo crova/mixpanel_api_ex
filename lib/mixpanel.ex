@@ -34,7 +34,7 @@ defmodule Mixpanel do
           worker(Mixpanel.Client, [config, [name: get_process_name()]])
         ]
 
-        supervise(children, strategy: :one_for_one)
+        Supervisor.init(children, strategy: :one_for_one)
       end
 
       def track(event, properties \\ %{}, opts \\ []) do
