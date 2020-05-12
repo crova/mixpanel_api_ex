@@ -50,6 +50,9 @@ defmodule Mixpanel do
       defp get_process_name() do
         :"mixpanel_#{@otp_app}"
       end
+
+      defoverridable track: 1, track: 2, track: 3
+      defoverridable engage: 2, engage: 3, engage: 4
     end
   end
 end
