@@ -3,113 +3,146 @@ defmodule MixpanelTest do
 
   import Mock
 
-  defp mock do
-    [get: fn _, _, _ -> {:ok, %HTTPoison.Response{status_code: 200, body: "1"}} end]
-  end
+  @events [[:mixpanel, :batch, :start], [:mixpanel, :batch, :stop], [:mixpanel, :dropped]]
 
   setup do
-    pid = Process.whereis(Mixpanel.Client)
+    config = [
+      active: true,
+      token: "",
+      max_idle: 75,
+      batch_size: 3,
+      max_queue_track: 5,
+      max_queue_engage: 5
+    ]
+    pid = start_supervised!({Mixpanel.Client, config})
 
     {:ok, pid: pid}
   end
 
-  test_with_mock "track an event", %{pid: pid}, HTTPoison, [], mock() do
-    Mixpanel.track("Signed up", %{"Referred By" => "friend"}, distinct_id: "13793")
+  describe "track" do
+    test "track an event", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        track(pid)
 
-    :timer.sleep(50)
+        :timer.sleep(100)
 
-    assert :meck.called(
-             HTTPoison,
-             :get,
-             [
-               "https://api.mixpanel.com/track",
-               [],
-               [
-                 params: [
-                   data:
-                     "eyJwcm9wZXJ0aWVzIjp7IlJlZmVycmVkIEJ5IjoiZnJpZW5kIiwidG9rZW4iOiIiLCJkaXN0aW5jdF9pZCI6IjEzNzkzIn0sImV2ZW50IjoiU2lnbmVkIHVwIn0="
-                 ]
-               ]
-             ],
-             pid
-           )
+        assert %{requests: 1, items: 1} = collect_requests()
+      end
+    end
 
-    Mixpanel.track(
-      "Level Complete",
-      %{"Level Number" => 9},
-      distinct_id: "13793",
-      time: 1_358_208_000,
-      ip: "203.0.113.9"
-    )
+    test "track multiple events", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..3, do: track(pid)
 
-    :timer.sleep(50)
+        :timer.sleep(100)
 
-    assert :meck.called(
-             HTTPoison,
-             :get,
-             [
-               "https://api.mixpanel.com/track",
-               [],
-               [
-                 params: [
-                   data:
-                     "eyJwcm9wZXJ0aWVzIjp7IkxldmVsIE51bWJlciI6OSwidG9rZW4iOiIiLCJ0aW1lIjoxMzU4MjA4MDAwLCJpcCI6IjIwMy4wLjExMy45IiwiZGlzdGluY3RfaWQiOiIxMzc5MyJ9LCJldmVudCI6IkxldmVsIENvbXBsZXRlIn0="
-                 ]
-               ]
-             ],
-             pid
-           )
+        assert %{requests: 1, items: 3} = collect_requests()
+      end
+    end
+
+    test "max queue size", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..10, do: track(pid)
+
+        :timer.sleep(100)
+
+        assert %{requests: 2, items: 5} = collect_requests()
+      end
+    end
+
+    test "telemetry", %{pid: pid} do
+      :telemetry.attach_many(make_ref(), @events, &forward_telemetry/4, self())
+
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..10, do: track(pid)
+
+        assert_receive {[:mixpanel, :batch, :start], _, _}
+        assert_receive {[:mixpanel, :batch, :stop], _, _}
+        assert_receive {[:mixpanel, :dropped], %{count: 5}, _}
+      end
+    end
   end
 
-  test_with_mock "track a profile update", %{pid: pid}, HTTPoison, [], mock() do
-    Mixpanel.engage(
-      "13793",
-      "$set",
-      %{"Address" => "1313 Mockingbird Lane"},
-      ip: "123.123.123.123"
+  describe "engage" do
+    test "track an engagement", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        engage(pid)
+
+        :timer.sleep(100)
+
+        assert %{requests: 1, items: 1} = collect_requests()
+      end
+    end
+
+    test "track multiple engagements", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..3, do: engage(pid)
+
+        :timer.sleep(100)
+
+        assert %{requests: 1, items: 3} = collect_requests()
+      end
+    end
+
+    test "max engagement queue size", %{pid: pid} do
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..10, do: engage(pid)
+
+        :timer.sleep(100)
+
+        assert %{requests: 2, items: 5} = collect_requests()
+      end
+    end
+
+    test "engagement telemetry", %{pid: pid} do
+      :telemetry.attach_many(make_ref(), @events, &forward_telemetry/4, self())
+
+      with_mock HTTPoison, post: &mock_post/3 do
+        for _ <- 1..10, do: engage(pid)
+
+        assert_receive {[:mixpanel, :batch, :start], _, _}
+        assert_receive {[:mixpanel, :batch, :stop], _, _}
+        assert_receive {[:mixpanel, :dropped], %{count: 5}, _}
+      end
+    end
+  end
+
+  defp mock_post(_, _, _) do
+    {:ok, %HTTPoison.Response{status_code: 200, body: "1"}}
+  end
+
+  defp track(pid) do
+    Mixpanel.Dispatcher.track("Signed up", %{"Referred By" => "friend"},
+      distinct_id: "13793",
+      process: pid
     )
+  end
 
-    :timer.sleep(50)
-
-    assert :meck.called(
-             HTTPoison,
-             :get,
-             [
-               "https://api.mixpanel.com/engage",
-               [],
-               [
-                 params: [
-                   data:
-                     "eyIkc2V0Ijp7IkFkZHJlc3MiOiIxMzEzIE1vY2tpbmdiaXJkIExhbmUifSwiJHRva2VuIjoiIiwiJGlwIjoiMTIzLjEyMy4xMjMuMTIzIiwiJGRpc3RpbmN0X2lkIjoiMTM3OTMifQ=="
-                 ]
-               ]
-             ],
-             pid
-           )
-
-    Mixpanel.engage(
-      "13793",
-      "$set",
-      %{"Address" => "1313 Mockingbird Lane", "Birthday" => "1948-01-01"},
-      ip: "123.123.123.123"
+  defp engage(pid) do
+    Mixpanel.Dispatcher.engage("13793", "$set", %{"Address" => "1313 Mockingbird Lane"},
+      ip: "123.123.123.123",
+      process: pid
     )
+  end
 
-    :timer.sleep(50)
+  defp collect_requests do
+    requests =
+      call_history(HTTPoison)
+      |> Enum.map(&count_items/1)
 
-    assert :meck.called(
-             HTTPoison,
-             :get,
-             [
-               "https://api.mixpanel.com/engage",
-               [],
-               [
-                 params: [
-                   data:
-                     "eyIkc2V0Ijp7IkJpcnRoZGF5IjoiMTk0OC0wMS0wMSIsIkFkZHJlc3MiOiIxMzEzIE1vY2tpbmdiaXJkIExhbmUifSwiJHRva2VuIjoiIiwiJGlwIjoiMTIzLjEyMy4xMjMuMTIzIiwiJGRpc3RpbmN0X2lkIjoiMTM3OTMifQ=="
-                 ]
-               ]
-             ],
-             pid
-           )
+    %{requests: length(requests), items: Enum.sum(requests)}
+  end
+
+  defp count_items(
+         {_, {HTTPoison, :post, ["https://api.mixpanel.com/" <> _, "data=" <> data, _]}, _}
+       ) do
+    data
+    |> URI.decode_www_form()
+    |> Jason.decode!()
+    |> length()
+  end
+
+  defp forward_telemetry(event, measurements, metadata, pid) do
+    send(pid, {event, measurements, metadata})
   end
 end
