@@ -90,9 +90,9 @@ defmodule Mixpanel.Client do
   def handle_info(:timeout, {%{batch_size: batch_size} = config, state}) do
     new_state =
       state
-      |> report_dropped()
-      |> engage_batch(batch_size, config.token)
-      |> track_batch(batch_size, config.token)
+      |> report_dropped(config.app)
+      |> engage_batch(batch_size, config)
+      |> track_batch(batch_size, config)
 
     case {Queue.length(new_state.track), Queue.length(new_state.engage)} do
       {0, 0} ->
@@ -114,38 +114,42 @@ defmodule Mixpanel.Client do
     end
   end
 
-  defp report_dropped(%{track_dropped: 0, engage_dropped: 0} = state) do
+  defp report_dropped(%{track_dropped: 0, engage_dropped: 0} = state, _otp_app) do
     state
   end
 
-  defp report_dropped(%{track_dropped: count} = state) when count > 0 do
-    :telemetry.execute([:mixpanel, :dropped], %{count: count}, %{type: :track})
-    report_dropped(%{state | track_dropped: 0})
+  defp report_dropped(%{track_dropped: count} = state, otp_app) when count > 0 do
+    :telemetry.execute([otp_app, :mixpanel, :dropped], %{count: count}, %{type: :track})
+    report_dropped(%{state | track_dropped: 0}, otp_app)
   end
 
-  defp report_dropped(%{engage_dropped: count} = state) when count > 0 do
-    :telemetry.execute([:mixpanel, :dropped], %{count: count}, %{type: :engage})
-    report_dropped(%{state | engage_dropped: 0})
+  defp report_dropped(%{engage_dropped: count} = state, otp_app) when count > 0 do
+    :telemetry.execute([otp_app, :mixpanel, :dropped], %{count: count}, %{type: :engage})
+    report_dropped(%{state | engage_dropped: 0}, otp_app)
   end
 
-  defp track_batch(state, batch_size, token) do
+  defp track_batch(state, batch_size, config) do
     case Queue.take(state.track, batch_size) do
       {[], _queue} ->
         state
 
       {batch, queue} ->
-        send_batch(@track_endpoint, Enum.map(batch, &encode_track(&1, token)), :track)
+        encoded = Enum.map(batch, &encode_track(&1, config.token))
+        send_batch(@track_endpoint, encoded, :track, config.app)
+
         %{state | track: queue}
     end
   end
 
-  defp engage_batch(state, batch_size, token) do
+  defp engage_batch(state, batch_size, config) do
     case Queue.take(state.engage, batch_size) do
       {[], _queue} ->
         state
 
       {batch, queue} ->
-        send_batch(@engage_endpoint, Enum.map(batch, &encode_engage(&1, token)), :engage)
+        encoded = Enum.map(batch, &encode_engage(&1, config.token))
+        send_batch(@engage_endpoint, encoded, :engage, config.app)
+
         %{state | engage: queue}
     end
   end
@@ -161,7 +165,7 @@ defmodule Mixpanel.Client do
     Map.put(event, "$token", token)
   end
 
-  defp send_batch(endpoint, batch, type) do
+  defp send_batch(endpoint, batch, type, app) do
     telemetry_metadata = %{type: type, count: length(batch)}
 
     data =
@@ -169,7 +173,7 @@ defmodule Mixpanel.Client do
       |> Jason.encode!()
       |> URI.encode_www_form()
 
-    :telemetry.span([:mixpanel, :batch], telemetry_metadata, fn ->
+    :telemetry.span([app, :mixpanel, :batch], telemetry_metadata, fn ->
       success? = http_post(endpoint, @headers, "data=" <> data)
       {success?, Map.put(telemetry_metadata, :success, success?)}
     end)
@@ -181,7 +185,7 @@ defmodule Mixpanel.Client do
         true
 
       other ->
-        Logger.warn("Problem tracking Mixpanel engagements: #{inspect other}")
+        Logger.warn("Problem tracking Mixpanel engagements: #{inspect(other)}")
         false
     end
   end

@@ -3,10 +3,16 @@ defmodule MixpanelTest do
 
   import Mock
 
-  @events [[:mixpanel, :batch, :start], [:mixpanel, :batch, :stop], [:mixpanel, :dropped]]
+  @app :sample_app
+  @events [
+    [@app, :mixpanel, :batch, :start],
+    [@app, :mixpanel, :batch, :stop],
+    [@app, :mixpanel, :dropped]
+  ]
 
   setup do
     config = [
+      app: @app,
       active: true,
       token: "",
       max_idle: 75,
@@ -14,6 +20,7 @@ defmodule MixpanelTest do
       max_queue_track: 5,
       max_queue_engage: 5
     ]
+
     pid = start_supervised!({Mixpanel.Client, config})
 
     {:ok, pid: pid}
@@ -56,9 +63,9 @@ defmodule MixpanelTest do
       with_mock HTTPoison, post: &mock_post/3 do
         for _ <- 1..10, do: track(pid)
 
-        assert_receive {[:mixpanel, :batch, :start], _, _}
-        assert_receive {[:mixpanel, :batch, :stop], _, _}
-        assert_receive {[:mixpanel, :dropped], %{count: 5}, _}
+        assert_receive {[@app, :mixpanel, :batch, :start], _, _}
+        assert_receive {[@app, :mixpanel, :batch, :stop], _, _}
+        assert_receive {[@app, :mixpanel, :dropped], %{count: 5}, _}
       end
     end
   end
@@ -100,9 +107,9 @@ defmodule MixpanelTest do
       with_mock HTTPoison, post: &mock_post/3 do
         for _ <- 1..10, do: engage(pid)
 
-        assert_receive {[:mixpanel, :batch, :start], _, _}
-        assert_receive {[:mixpanel, :batch, :stop], _, _}
-        assert_receive {[:mixpanel, :dropped], %{count: 5}, _}
+        assert_receive {[@app, :mixpanel, :batch, :start], _, _}
+        assert_receive {[@app, :mixpanel, :batch, :stop], _, _}
+        assert_receive {[@app, :mixpanel, :dropped], %{count: 5}, _}
       end
     end
   end
