@@ -106,6 +106,13 @@ defmodule Mixpanel.Client do
     end
   end
 
+  # Workaround for Hackney bug; unfortunately this interferes with the idle
+  # timeout handling, but since it is relatively rare it will have to do for
+  # now
+  def handle_info({:ssl_closed, _sock}, {config, state}) do
+    {:noreply, {config, state}, config.max_idle}
+  end
+
   defp receive_timeout(queue, config) do
     if Queue.length(queue) >= config.batch_size do
       0
