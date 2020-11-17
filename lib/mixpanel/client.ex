@@ -58,8 +58,13 @@ defmodule Mixpanel.Client do
     {:ok, {config, state}}
   end
 
-  # No events submitted when env configuration is set to false.
+  # No events submitted when env configuration is set to false or no token is
+  # configured.
   def handle_cast(_request, {%{active: false}, _} = state) do
+    {:noreply, state}
+  end
+
+  def handle_cast(_request, {%{token: nil}, _} = state) do
     {:noreply, state}
   end
 
