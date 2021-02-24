@@ -185,10 +185,26 @@ defmodule Mixpanel.Client do
       |> Jason.encode!()
       |> URI.encode_www_form()
 
-    :telemetry.span([app, :mixpanel, :batch], telemetry_metadata, fn ->
-      success? = http_post(endpoint, @headers, "data=" <> data)
-      {success?, Map.put(telemetry_metadata, :success, success?)}
-    end)
+    batch_size = length(batch)
+    start_time = System.system_time()
+    start_mono = System.monotonic_time()
+
+    :telemetry.execute(
+      [app, :mixpanel, :batch, :start],
+      %{system_time: start_time, batch_size: batch_size},
+      %{type: type}
+    )
+
+    success? = http_post(endpoint, @headers, "data=" <> data)
+
+    :telemetry.execute(
+      [app, :mixpanel, :batch, :stop],
+      %{duration: System.monotonic_time() - start_mono, batch_size: batch_size},
+      %{
+        type: type,
+        success: success?
+      }
+    )
   end
 
   defp http_post(url, headers, body) do
