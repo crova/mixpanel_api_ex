@@ -31,7 +31,7 @@ defmodule Mixpanel do
 
       def init(config) do
         children = [
-          {Mixpanel.Client, [config, [name: get_process_name()]]}
+          {Mixpanel.Client, Enum.into(config, [name: get_process_name()])}
         ]
 
         Supervisor.init(children, strategy: :one_for_one)

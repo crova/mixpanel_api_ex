@@ -21,8 +21,8 @@ defmodule Mixpanel.Client do
     max_idle: 500
   }
 
-  def start_link(config, opts \\ []) do
-    GenServer.start_link(__MODULE__, {:ok, config}, opts)
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, {:ok, config}, config)
   end
 
   @doc """
