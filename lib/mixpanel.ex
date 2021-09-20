@@ -22,7 +22,7 @@ defmodule Mixpanel do
         config = Application.get_env(@otp_app, :mixpanel)
 
         if config do
-          Supervisor.start_link(__MODULE__, Enum.into(config, %{app: @otp_app}))
+          Supervisor.start_link(__MODULE__, Keyword.merge(config, app: @otp_app))
         else
           Logger.warn("Mixpanel not configured for application #{@otp_app}")
           :ignore
@@ -31,7 +31,7 @@ defmodule Mixpanel do
 
       def init(config) do
         children = [
-          {Mixpanel.Client, Enum.into(config, [name: get_process_name()])}
+          {Mixpanel.Client, Keyword.merge(config, name: get_process_name())}
         ]
 
         Supervisor.init(children, strategy: :one_for_one)

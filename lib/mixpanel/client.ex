@@ -178,8 +178,6 @@ defmodule Mixpanel.Client do
   end
 
   defp send_batch(endpoint, batch, type, app) do
-    telemetry_metadata = %{type: type, count: length(batch)}
-
     data =
       batch
       |> Jason.encode!()
