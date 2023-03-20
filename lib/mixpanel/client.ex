@@ -69,6 +69,7 @@ defmodule Mixpanel.Client do
   end
 
   def handle_cast({:track, _event, _properties} = event, {config, state}) do
+        IO.puts :in_mixpanel_api_lib_track_handle_cast
     case Queue.push(state.track, event) do
       :dropped ->
         new_state = Map.update!(state, :track_dropped, &(&1 + 1))
@@ -141,6 +142,7 @@ defmodule Mixpanel.Client do
   end
 
   defp track_batch(state, batch_size, config) do
+        IO.puts :in_mixpanel_api_lib_track_batch
     case Queue.take(state.track, batch_size) do
       {[], _queue} ->
         state
@@ -178,6 +180,7 @@ defmodule Mixpanel.Client do
   end
 
   defp send_batch(endpoint, batch, type, app) do
+    IO.puts :send_batch
     data =
       batch
       |> Jason.encode!()
@@ -206,7 +209,7 @@ defmodule Mixpanel.Client do
   end
 
   defp http_post(url, headers, body) do
-    case HTTPoison.post(url, body, headers) do
+    case HTTPoison.post(url, body, headers) |> IO.inspect(label: :http_post_response, pretty: true) do
       {:ok, %HTTPoison.Response{status_code: 200, body: "1"}} ->
         true
 

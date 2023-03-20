@@ -38,6 +38,7 @@ defmodule Mixpanel do
       end
 
       def track(event, properties \\ %{}, opts \\ []) do
+        IO.puts :in_track_event_mixpanel_api_lib
         opts = Keyword.merge(opts, process: get_process_name())
         Mixpanel.Dispatcher.track(event, properties, opts)
       end
