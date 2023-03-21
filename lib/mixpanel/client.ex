@@ -32,7 +32,6 @@ defmodule Mixpanel.Client do
   """
   @spec track(String.t(), Map.t(), Atom.t()) :: :ok
   def track(event, properties \\ %{}, process \\ nil) do
-    IO.puts :inside_track_from_the_client_just_before_casting
     GenServer.cast(process || __MODULE__, {:track, event, properties})
   end
 
@@ -70,15 +69,12 @@ defmodule Mixpanel.Client do
   end
 
   def handle_cast({:track, _event, _properties} = event, {config, state}) do
-        IO.puts :in_mixpanel_api_lib_track_handle_cast
     case Queue.push(state.track, event) do
       :dropped ->
-        IO.puts :dropped_after_pushing_from_queue
         new_state = Map.update!(state, :track_dropped, &(&1 + 1))
         {:noreply, {config, new_state}, 0}
 
       {:ok, queue} ->
-        IO.puts :ok_after_pushing_from_queue
         timeout = receive_timeout(queue, config)
         {:noreply, {config, %{state | track: queue}}, timeout}
     end
@@ -145,7 +141,6 @@ defmodule Mixpanel.Client do
   end
 
   defp track_batch(state, batch_size, config) do
-        IO.puts :in_mixpanel_api_lib_track_batch
     case Queue.take(state.track, batch_size) do
       {[], _queue} ->
         state
@@ -183,7 +178,6 @@ defmodule Mixpanel.Client do
   end
 
   defp send_batch(endpoint, batch, type, app) do
-    IO.puts :send_batch
     data =
       batch
       |> Jason.encode!()
@@ -211,9 +205,12 @@ defmodule Mixpanel.Client do
     )
   end
 
+  require Logger
   defp http_post(url, headers, body) do
-    IO.puts :begin_http_post
-    case HTTPoison.post(url, body, headers) |> IO.inspect(label: :http_post_response, pretty: true) do
+    http_post_response = HTTPoison.post(url, body, headers)
+    Logger.info("HTTP post response: #{http_post_response}")
+
+    case http_post_response  do
       {:ok, %HTTPoison.Response{status_code: 200, body: "1"}} ->
         true
 

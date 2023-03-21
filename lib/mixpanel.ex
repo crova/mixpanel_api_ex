@@ -39,8 +39,11 @@ defmodule Mixpanel do
 
       def track(event, properties \\ %{}, opts \\ []) do
         IO.puts :in_track_event_mixpanel_api_lib
-        opts = Keyword.merge(opts, process: get_process_name()) |> IO.inspect(label: :opts_from_initial_track_call)
-        Mixpanel.Dispatcher.track(event, properties, opts) |> IO.inspect(label: :mixpanel_dispatcher_result)
+        opts = Keyword.merge(opts, process: get_process_name())
+          Logger.info("Opts from track call within main module: #{opts}")
+        dispatcher = Mixpanel.Dispatcher.track(event, properties, opts)
+          Logger.info("Dispatcher call result: #{dispatcher}")
+          dispatcher
       end
 
       def engage(distinct_id, operation, value \\ %{}, opts \\ []) do

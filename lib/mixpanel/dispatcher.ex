@@ -15,17 +15,20 @@ defmodule Mixpanel.Dispatcher do
   * `:ip`          - An IP address string (e.g. "127.0.0.1") associated with the event. This is used for adding geolocation data to events, and should only be required if you are making requests from your backend. If `:ip` is absent, Mixpanel will ignore the IP address of the request.
 
   """
+  require logger
   @spec track(String.t(), Map.t(), Keyword.t()) :: :ok
   def track(event, properties \\ %{}, opts \\ []) do
     IO.puts :begin_track_from_dispatcher
+          Logger.info("Begin track from dispatcher")
     properties =
       properties
       |> track_put_time(Keyword.get(opts, :time))
       |> track_put_distinct_id(Keyword.get(opts, :distinct_id))
       |> track_put_ip(Keyword.get(opts, :ip))
-    |> IO.inspect(label: :track_from_dispatcher_properties)
+          Logger.info("Properties from dispatcher track: #{properties}")
 
-    Mixpanel.Client.track(event, properties, opts[:process]) |> IO.inspect(label: :mixpanel_client_track_result_inside_dispatcher)
+    client_track = Mixpanel.Client.track(event, properties, opts[:process])
+          Logger.info("Client track result from dispatcher: #{client_track}")
 
     :ok
   end
