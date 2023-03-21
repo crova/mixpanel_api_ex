@@ -32,6 +32,7 @@ defmodule Mixpanel.Client do
   """
   @spec track(String.t(), Map.t(), Atom.t()) :: :ok
   def track(event, properties \\ %{}, process \\ nil) do
+    IO.puts :inside_track_from_the_client_just_before_casting
     GenServer.cast(process || __MODULE__, {:track, event, properties})
   end
 
@@ -72,10 +73,12 @@ defmodule Mixpanel.Client do
         IO.puts :in_mixpanel_api_lib_track_handle_cast
     case Queue.push(state.track, event) do
       :dropped ->
+        IO.puts :dropped_after_pushing_from_queue
         new_state = Map.update!(state, :track_dropped, &(&1 + 1))
         {:noreply, {config, new_state}, 0}
 
       {:ok, queue} ->
+        IO.puts :ok_after_pushing_from_queue
         timeout = receive_timeout(queue, config)
         {:noreply, {config, %{state | track: queue}}, timeout}
     end
@@ -209,6 +212,7 @@ defmodule Mixpanel.Client do
   end
 
   defp http_post(url, headers, body) do
+    IO.puts :begin_http_post
     case HTTPoison.post(url, body, headers) |> IO.inspect(label: :http_post_response, pretty: true) do
       {:ok, %HTTPoison.Response{status_code: 200, body: "1"}} ->
         true

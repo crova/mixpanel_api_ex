@@ -17,13 +17,15 @@ defmodule Mixpanel.Dispatcher do
   """
   @spec track(String.t(), Map.t(), Keyword.t()) :: :ok
   def track(event, properties \\ %{}, opts \\ []) do
+    IO.puts :begin_track_from_dispatcher
     properties =
       properties
       |> track_put_time(Keyword.get(opts, :time))
       |> track_put_distinct_id(Keyword.get(opts, :distinct_id))
       |> track_put_ip(Keyword.get(opts, :ip))
+    |> IO.inspect(label: :track_from_dispatcher_properties)
 
-    Mixpanel.Client.track(event, properties, opts[:process])
+    Mixpanel.Client.track(event, properties, opts[:process]) |> IO.inspect(label: :mixpanel_client_track_result_inside_dispatcher)
 
     :ok
   end
