@@ -211,7 +211,7 @@ defmodule Mixpanel.Client do
         true
 
       other ->
-        Logger.warn("Problem tracking Mixpanel engagements: #{inspect(other)}")
+        Logger.warning("Problem tracking Mixpanel engagements: #{inspect(other)}")
         false
     end
   end

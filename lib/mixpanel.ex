@@ -24,7 +24,7 @@ defmodule Mixpanel do
         if config do
           Supervisor.start_link(__MODULE__, Keyword.merge(config, app: @otp_app))
         else
-          Logger.warn("Mixpanel not configured for application #{@otp_app}")
+          Logger.warning("Mixpanel not configured for application #{@otp_app}")
           :ignore
         end
       end
